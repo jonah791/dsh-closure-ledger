@@ -35,9 +35,10 @@ import {
   type Verdict,
 } from './ledger.ts'
 import { appendTrace, ledgerPath, readLenient, readStrict, resolveHome, writeAtomic } from './store.ts'
+import { installInject } from './inject.ts'
 
 export const name = 'closure-ledger'
-export const inject = ['tools'] as const
+export const inject = ['tools', 'agents'] as const
 
 export interface Config {
   enabled: boolean
@@ -397,4 +398,9 @@ export function apply(ctx: Context, config: Config): void {
   ctx.tools.register(reviseTool)
   ctx.tools.register(gapsTool)
   ctx.tools.register(summaryTool)
+
+  // 缺口读数注入：只在**真的有缺口**时出现（没缺口不噪音）。
+  // 不注入的话，这 5 个工具的结果就是「造完当天用三次，之后再也不会想起」——
+  // 中性提醒不改变行为，读数必须出现在执行路径上（arXiv:2610.14966v1）。
+  installInject(ctx, { loadLedger: loadLenient, staleDays: DEFAULT_STALE_DAYS })
 }
